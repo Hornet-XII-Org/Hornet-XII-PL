@@ -43,6 +43,8 @@ Dashed arrows represent configuration reads or feedback. Focal length and stereo
 
 Members should begin with [CONTRIBUTING.md](CONTRIBUTING.md), [topic contracts](docs/interfaces.md), and their folder README. Use the [node work issue template](.github/ISSUE_TEMPLATE/node-work.md) to assign work. Integrate node packages into your team's robot workspace.
 
+The [measured front stereo calibration](front_camera/config/measured/README.md) from the ROS 2 Jazzy tutorial is included with commands for rectification and depth estimation. It describes 320×240 per lens (640×240 side-by-side capture); use it only with the corresponding camera rig and capture settings.
+
 ## Topic contract at a glance
 
 `<type>` is one of `gate`, `yellow_flare`, `orange_flare`, `blue_flare`, `red_flare`, `blue_drum`, `red_drum`. Edit the depth YAML list and producer implementations together when the competition classes are finalized.

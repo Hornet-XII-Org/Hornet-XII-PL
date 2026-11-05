@@ -9,6 +9,7 @@ setup(
         ('share/hornet_front_camera/launch', glob('launch/*.launch.py')),
         ('share/hornet_front_camera/config', glob('config/*.yaml')),
         ('share/hornet_front_camera/config/examples', glob('config/examples/*.yaml')),
+        ('share/hornet_front_camera/config/measured', glob('config/measured/*.yaml') + glob('config/measured/*.md')),
     ],
     install_requires=['setuptools'], zip_safe=True,
     maintainer='Hornet XII PL subteam', maintainer_email='maintainers@example.invalid',

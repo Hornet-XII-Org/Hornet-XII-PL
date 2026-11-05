@@ -4,6 +4,8 @@
 
 `hornet_depth/geometry.py` implements sparse stereo triangulation, pixel-noise covariance, rigid transforms and source-selection policy without importing ROS. `node.py` adapts these to ROS topics and timestamped TF. `config/depth.yaml` contains initial gates/switch thresholds. `launch/depth.launch.py` accepts real left/right calibration paths.
 
+The saved ROS 2 Jazzy tutorial pair is included in `front_camera/config/measured/`. See its [geometry, provenance and launch commands](../front_camera/config/measured/README.md). Select the same pair for rectification, detection metadata and depth estimation; the synthetic examples remain the launch defaults and are disabled by default.
+
 ## Contract
 
 Inputs per class: `/front/detections/<type>` and `/front/color/<type>`, both `hornet_interfaces/msg/StereoObservation`. Outputs: `/objects/<type>/position` (`ObjectPosition`) and `/perception/selection/<type>` (`SourceSelection`). Reliable, volatile, KEEP_LAST depth 10. See [the full contract](../docs/interfaces.md).

@@ -8,6 +8,7 @@ This component owns front camera capture, stereo calibration, and color rectific
 - `hornet_front_camera/calibrate.py`: `calibrate_stereo` offline checkerboard command; writes left/right calibration YAML.
 - `hornet_front_camera/models.py`: saved camera-model loading and stereo geometry validation; also used by depth estimation.
 - `config/examples/{left,right}.yaml`: synthetic geometry examples, disabled by default.
+- `config/measured/{left,right}.yaml`: saved tutorial stereo calibration, 320×240 per lens. See [profile details and launch commands](config/measured/README.md).
 - `config/rectification.yaml`, `launch/rectify.launch.py`: runtime configuration and launch.
 - Add camera-driver configuration, launch, and any `.py` acquisition adapter in this component. Prefer an existing Jazzy driver such as `usb_cam`.
 
@@ -31,6 +32,10 @@ ros2 run hornet_front_camera calibrate_stereo \
 The board settings are examples. The tool estimates intrinsics, stereo extrinsics and rectification; only horizontal pinhole stereo is supported. It requires at least 12 accepted views by default, rejects fits exceeding its RMS gate, and never overwrites an output directory. Validate held-out alignment, physical baseline and measured ranges in the actual housing/medium. Store camera/mode/board provenance with the YAMLs.
 
 ## Runtime
+
+To reuse the calibration saved in the ROS 2 Jazzy tutorial, follow the [measured profile instructions](config/measured/README.md). It requires the same physical stereo rig, focus and capture mode, with 640×240 combined input. The launch defaults still point to disabled synthetic examples, so select the measured pair explicitly.
+
+To use a newly generated calibration instead:
 
 ```bash
 ros2 launch hornet_front_camera rectify.launch.py \

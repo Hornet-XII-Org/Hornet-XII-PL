@@ -1,0 +1,38 @@
+image_width: 320
+image_height: 240
+camera_name: narrow_stereo/left
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [222.71655,   0.     , 159.78327,
+           0.     , 221.70002, 122.26157,
+           0.     ,   0.     ,   1.     ]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.055711, -0.082286, -0.003276, 0.000800, 0.000000]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [ 0.99986051, -0.00103477,  0.01667001,
+          0.00091515,  0.99997379,  0.00718184,
+         -0.016677  , -0.00716559,  0.99983525]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [239.38129,   0.     , 156.98016,   0.     ,
+           0.     , 239.38129, 111.80197,   0.     ,
+           0.     ,   0.     ,   1.     ,   0.     ]
+
+# Repository metadata; original calibration values above are unchanged.
+units: metres
+calibration_id: tutorial_stereo_2026_10_30_ffd6ed5c_916eae4e
+rectified_frame_id: front_left_rect_optical_frame
+is_example: false
+source_format: ros_camera_calibration
+source_file: left.yaml
+source_sha256: ffd6ed5cc733c187b63b0c1acef9a46bedf6ab0b0aad42caa74e2b181addc6cd
+calibration_result_time_utc: "2026-10-30T08:56:03Z"
+board_inner_corners: [8, 6]
+square_size_m: 0.025
