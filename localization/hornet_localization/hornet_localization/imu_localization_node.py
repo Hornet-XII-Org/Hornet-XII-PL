@@ -127,7 +127,7 @@ class ImuLocalizationNode(Node):
         )
 
         try:
-            position_map, velocity_map = self.estimator.update(
+            estimate = self.estimator.update(
                 timestamp_sec,
                 acceleration_body,
                 orientation,
@@ -139,6 +139,14 @@ class ImuLocalizationNode(Node):
                 self.estimator_pending_warning_sent = True
             return
 
+        if estimate is None:
+            self.get_logger().warning(
+                'Estimator skipped an invalid or out-of-sequence IMU sample',
+                throttle_duration_sec=5.0,
+            )
+            return
+
+        position_map, velocity_map = estimate
         if not self._valid_vector(position_map) or not self._valid_vector(
                 velocity_map):
             self.get_logger().warning(
