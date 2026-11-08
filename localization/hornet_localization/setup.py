@@ -26,6 +26,7 @@ setup(
     maintainer_email='nyxkk@users.noreply.github.com',
     description='Initial IMU localization integration for Hornet XII.',
     license='LicenseRef-Proprietary',
+    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'imu_localization_node = '
