@@ -92,7 +92,7 @@ class ImuLocalizationNode(Node):
         self.estimator_pending_warning_sent = False
 
         self.get_logger().info(
-            'Localization interface ready; estimator integration is pending')
+            'Localization interface ready')
 
     def imu_callback(self, message: Imu) -> None:
         """Update the estimate and publish matching Odometry and TF data."""
