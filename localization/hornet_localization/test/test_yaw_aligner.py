@@ -66,6 +66,30 @@ def test_later_relative_yaw_is_preserved(
     assert angle_difference(yaw, expected) == pytest.approx(0.0, abs=1e-9)
 
 
+@pytest.mark.parametrize(
+    'bad_first',
+    [
+        (float('nan'), 0.0, 0.0, 1.0),
+        (0.0, float('inf'), 0.0, 1.0),
+        (0.0, 0.0, 0.0, 0.0),
+    ],
+    ids=['nan', 'inf', 'zero'],
+)
+def test_bad_first_message_does_not_set_the_starting_yaw(bad_first):
+    aligner = YawAligner()
+
+    assert aligner.align(bad_first) is bad_first
+
+    # The first good message, at yaw 90, must become the reference.
+    first_good = aligner.align(quaternion_from_rpy(0.0, 0.0, math.radians(90)))
+    later = aligner.align(quaternion_from_rpy(0.0, 0.0, math.radians(120)))
+
+    _, _, first_good_yaw = rpy_from_quaternion(first_good)
+    _, _, later_yaw = rpy_from_quaternion(later)
+    assert first_good_yaw == pytest.approx(0.0, abs=1e-9)
+    assert later_yaw == pytest.approx(math.radians(30), abs=1e-9)
+
+
 def test_roll_and_pitch_are_preserved():
     aligner = YawAligner()
 

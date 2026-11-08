@@ -113,6 +113,37 @@ def test_bad_timestamp_returns_none_and_keeps_state(timestamp):
     assert_state_unchanged(estimator)
 
 
+def test_backward_by_exactly_max_dt_returns_none_and_keeps_state():
+    # These times are exact in binary, so the step is exactly -0.5 s.
+    def moved():
+        estimator = InertialEstimator()
+        estimator.update(10.0, FORWARD_1_MPS2, LEVEL)
+        estimator.update(10.25, FORWARD_1_MPS2, LEVEL)
+        return estimator
+
+    estimator = moved()
+
+    assert estimator.update(9.75, FORWARD_5_MPS2, LEVEL) is None
+
+    next_sample = (10.5, FORWARD_1_MPS2, LEVEL)
+    assert estimator.update(*next_sample) == moved().update(*next_sample)
+
+
+def test_large_backward_jump_restarts_timing_without_integrating():
+    # Before the jump: velocity 0.1 m/s, position 0.005 m.
+    estimator = InertialEstimator()
+    estimator.update(100.0, FORWARD_1_MPS2, LEVEL)
+    estimator.update(100.1, FORWARD_1_MPS2, LEVEL)
+
+    assert estimator.update(1.0, (3.0, 0.0, GRAVITY), LEVEL) is None
+    position, velocity = estimator.update(1.1, FORWARD_1_MPS2, LEVEL)
+
+    # The new reference is the sample at 1.0 s.  Only the 0.1 s after the
+    # jump counts, with average acceleration (3 + 1) / 2 = 2.
+    assert_near(velocity, (0.3, 0.0, 0.0))
+    assert_near(position, (0.025, 0.0, 0.0))
+
+
 @pytest.mark.parametrize(
     'timestamp, acceleration, orientation',
     [

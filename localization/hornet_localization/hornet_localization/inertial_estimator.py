@@ -73,11 +73,12 @@ class InertialEstimator:
 
         - an input is NaN or infinite, or the quaternion length is near zero
           (state is not changed);
-        - the timestamp is repeated or goes backward (state is not changed);
-        - the time since the last sample is longer than ``max_dt_sec``.  The
-          estimator restarts its timing from this sample and does not
-          integrate across the gap.  Position and velocity keep their old
-          values.
+        - the timestamp is repeated, or goes backward by ``max_dt_sec`` or
+          less (state is not changed);
+        - the timestamp jumps forward or backward by more than ``max_dt_sec``
+          (a data gap or a clock jump).  The estimator restarts its timing
+          from this sample and does not integrate across the jump.  Position
+          and velocity keep their old values.
         """
         values = (
             timestamp_sec,
@@ -106,12 +107,14 @@ class InertialEstimator:
 
         dt = timestamp_sec - self._last_timestamp_sec
 
-        if dt <= 0.0:
-            return None
-
-        if dt > self._max_dt_sec:
+        # A large jump in either direction restarts the timing.  Without this,
+        # a backward clock jump would reject every sample until time caught up.
+        if abs(dt) > self._max_dt_sec:
             self._last_timestamp_sec = timestamp_sec
             self._previous_acceleration_map = acceleration_map
+            return None
+
+        if dt <= 0.0:
             return None
 
         # Trapezoid rule: use the average of the old and new values.

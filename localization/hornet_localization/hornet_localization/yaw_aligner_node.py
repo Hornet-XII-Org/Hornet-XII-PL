@@ -8,8 +8,18 @@ so the robot always starts facing yaw 0.  Roll and pitch do not change.
 import math
 from typing import Optional, Tuple
 
+from hornet_localization.inertial_estimator import _MIN_QUATERNION_LENGTH
+
 
 Quaternion = Tuple[float, float, float, float]
+
+
+def _is_usable(quaternion_xyzw: Quaternion) -> bool:
+    """Return whether a quaternion is finite and not near zero."""
+    return (
+        all(math.isfinite(part) for part in quaternion_xyzw)
+        and math.hypot(*quaternion_xyzw) >= _MIN_QUATERNION_LENGTH
+    )
 
 
 def yaw_from_quaternion(quaternion_xyzw: Quaternion) -> float:
@@ -38,8 +48,14 @@ class YawAligner:
         self._first_yaw_rad: Optional[float] = None
 
     def align(self, quaternion_xyzw: Quaternion) -> Quaternion:
-        """Return the orientation with the starting yaw removed."""
+        """Return the orientation with the starting yaw removed.
+
+        The starting yaw is saved from the first finite, non-zero quaternion.
+        Until one arrives, the input is returned unchanged.
+        """
         if self._first_yaw_rad is None:
+            if not _is_usable(quaternion_xyzw):
+                return quaternion_xyzw
             self._first_yaw_rad = yaw_from_quaternion(quaternion_xyzw)
         return rotate_about_z(-self._first_yaw_rad, quaternion_xyzw)
 
