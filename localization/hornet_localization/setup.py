@@ -30,6 +30,10 @@ setup(
         'console_scripts': [
             'imu_localization_node = '
             'hornet_localization.imu_localization_node:main',
+            'yaw_aligner_node = '
+            'hornet_localization.yaw_aligner_node:main',
+            'sim_imu_adapter_node = '
+            'hornet_localization.sim_imu_adapter_node:main',
         ],
     },
 )
