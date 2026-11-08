@@ -107,6 +107,20 @@ ros2 run tf2_ros tf2_echo odom base_link
 For the stationary message above, position and velocity should remain close
 to zero.  Stop each long-running command with Ctrl+C.
 
+### Verification record
+
+Verified on 2026-11-09 using ROS 2 Jazzy on Ubuntu 24.04 ARM64:
+
+- the package built successfully;
+- all 30 automated tests passed with no errors, failures, or skips;
+- the complete launch chain received a synthetic stationary IMU stream;
+- `/localization/odometry` reported zero position and velocity; and
+- both `odom -> base_link` and `map -> base_link` TF lookups reported zero
+  translation and the identity quaternion.
+
+This is a software wiring check.  It does not replace validation using the
+real sensor mounting, calibration, noise, and vehicle motion.
+
 ## Current limitations
 
 - The node does not publish fake zero odometry while its estimate is invalid.
