@@ -1,0 +1,51 @@
+source:
+  rulebook_url: https://sauvc.org/rulebook/
+  rulebook_version: '2027.3.2'
+  section: '9.2, 9.4, 9.1'
+
+# Unknown-source test photos: a declared assumption to provide approximate XYZ.
+# This is NOT an Arducam preset. Change FOV if the photo's camera is known.
+camera:
+  mode: estimate
+  horizontal_fov_deg: 60.0
+# For calibrated images, replace the block above with mode: intrinsics and
+# fx_px, fy_px, cx_px, cy_px, image_width, image_height, assumed: false,
+# input_rectified: true. Use the same camera/capture mode as the image.
+
+objects:
+  ball:
+    diameter_m: 0.04
+    diameter_assumed: true
+    allowed_diameter_m: [0.035, 0.045]
+  drum:
+    diameter_m: 0.60
+    diameter_assumed: true
+  flare:
+    colored_height_m: 0.80
+    colored_diameter_m: 0.016
+    orange_height_m: 1.50
+    orange_diameter_m: 0.15
+  gate:
+    width_m: 1.50
+    height_m: 1.50
+
+ball_detection:
+  min_area: 20
+  min_circularity: 0.75
+  canny_low: 50
+  canny_high: 150
+  blur_kernel: 5
+
+ball_geometry:
+  max_normalized_offset: 0.35
+  max_focal_relative_difference: 0.01
+
+drum_detection:
+  working_size: 640
+  min_edge_support: 0.60
+
+testing:
+  object: drum
+  image: null
+  mask: null  # Optional binary silhouette PNG, same size as image; skips color thresholds.
+  bbox: null
