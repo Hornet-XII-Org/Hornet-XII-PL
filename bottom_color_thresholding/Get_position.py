@@ -247,8 +247,15 @@ def _drum_observation(image, bbox, settings, object_mask=None):
         masks = [("provided_mask", object_mask[y1:y2:step, x1:x2:step])]
     else:
         red, green, blue = rgb.transpose(2, 0, 1)
+        blue_mask = (blue > red+14) & (green > red+6) & (blue > .95*green)
+        if blue_mask.any():
+            # Reject weak blue casts and dark shadow pixels relative to the bowl.
+            chroma = (np.minimum(blue, green)-red)/(np.maximum(blue, green)+1)
+            blue_mask &= chroma > max(0., float(np.percentile(chroma[blue_mask], 80))-.35)
+            if blue_mask.any():
+                blue_mask &= blue > .35*np.percentile(blue[blue_mask], 90)
         masks = [("red", (red > 1.25*green) & (red > 1.2*blue) & (red-green > 25)),
-                 ("blue", (blue > red+14) & (green > red+6) & (blue > .95*green))]
+                 ("blue", blue_mask)]
     contours = []
     for source, candidate in masks:
         candidate = cv2.morphologyEx(candidate.astype(np.uint8)*255, cv2.MORPH_CLOSE,
@@ -302,6 +309,8 @@ def _drum_observation(image, bbox, settings, object_mask=None):
             continue
         ix, iy = np.rint(rim[visible]).astype(int).T
         ix, iy = np.clip(ix, 0, mask.shape[1]-1), np.clip(iy, 0, mask.shape[0]-1)
+        if expanded[iy, ix].mean() < .95:
+            continue
         distance = np.minimum(distances[iy, ix], 12)
         support = float(np.mean(distance < 3))
         lip = light[iy, ix].mean()/255
@@ -315,23 +324,38 @@ def _drum_observation(image, bbox, settings, object_mask=None):
             "boundary": boundary, "strength": strength, "step": step, "offset": np.array([x1, y1])}
 
 
-def _inner_rim(mouth, strength):
-    """Track a visible inner ring, returning its fitted ellipse and image points."""
+def _inner_rim(mouth, strength, search_center=None):
+    """Track a bottom rim around a search seed; the fitted center stays free."""
     center, axes, angle = mouth
-    t, radius = np.linspace(0, 2*np.pi, 180, endpoint=False), np.linspace(.38, .88, 90)
+    if not np.any(strength > .5):
+        return None
+    origin = np.asarray(center if search_center is None else search_center, dtype=float)
+    t, radius = np.linspace(0, 2*np.pi, 180, endpoint=False), np.linspace(.05, .95, 90)
     rotation = _rotation(angle)
-    rays = np.column_stack((np.cos(t), np.sin(t))) * (np.array(axes)/2)
-    points = (rays[:, None, :]*radius[None, :, None]) @ rotation.T + center
+    directions = np.column_stack((np.cos(t), np.sin(t)))
+    shift = _local_ellipse(origin[None, :], mouth)[0]
+    if shift @ shift >= 1:
+        return None
+    # Distance from the shifted seed to the ORIGINAL mouth along each ray.
+    along = directions @ shift
+    limit = -along + np.sqrt(along**2 + 1 - shift @ shift)
+    rays = directions * (np.array(axes)/2) * limit[:, None]
+    points = (rays[:, None, :]*radius[None, :, None]) @ rotation.T + origin
     x, y = np.rint(points[..., 0]).astype(int), np.rint(points[..., 1]).astype(int)
     visible = (x >= 0) & (x < strength.shape[1]) & (y >= 0) & (y < strength.shape[0])
+    distance = np.linalg.norm(_local_ellipse(points.reshape(-1, 2), mouth), axis=1).reshape(180, 90)
+    visible &= distance < .90  # Exclude the mouth lip, using its unchanged ellipse.
     if visible.sum() < 100:
         return None
     values = strength[np.clip(y, 0, strength.shape[0]-1), np.clip(x, 0, strength.shape[1]-1)]
-    scores = np.minimum(values/max(1., float(np.percentile(values[visible], 80))), 1)
+    scale = max(1., float(np.percentile(values[visible], 80)))
+    scores = np.minimum(values/scale, 1)
+    scores += .2*distance  # Mildly prefer the outer inner-ring over central markings.
     scores[~visible] = 0
     best, history = scores[0], []
     penalty = .06*(np.arange(90)[:, None]-np.arange(90)[None, :])**2
-    for row in scores[1:]:
+    # Repeat angular data so the retained middle turn has context across 0/360 deg.
+    for row in np.tile(scores, (3, 1))[1:]:
         transition = best[:, None]-penalty
         previous = transition.argmax(axis=0)
         best = row + transition[previous, np.arange(90)]
@@ -340,20 +364,42 @@ def _inner_rim(mouth, strength):
     for previous in history[::-1]:
         path.append(index)
         index = int(previous[index])
-    path = np.array([index] + path[::-1])
+    path = np.array([index] + path[::-1])[180:360]
+    if abs(int(path[0])-int(path[-1])) > 4:
+        return None
     keep = visible[np.arange(180), path] & (values[np.arange(180), path] > .5)
     observed = points[np.arange(180), path][keep]
     if len(observed) < 60:
         return None
     try:
         ellipse = _fit_ellipse(observed)
+        # Reject measured DP outliers, then refit; never draw invented rim samples.
+        for _ in range(2):
+            residual = np.abs(np.linalg.norm(_local_ellipse(observed, ellipse), axis=1)-1)
+            inliers = residual < .05
+            if inliers.all():
+                break
+            observed = observed[inliers]
+            if len(observed) < 60:
+                return None
+            ellipse = _fit_ellipse(observed)
         local = _local_ellipse(observed, ellipse)
         residual = np.abs(np.linalg.norm(local, axis=1)-1)
         angles = np.sort(np.mod(np.arctan2(local[:, 1], local[:, 0]), 2*np.pi))
         largest_gap = np.diff(np.r_[angles, angles[0]+2*np.pi]).max()
         ratio = max(ellipse[1])/max(mouth[1])
-        if residual.mean() < .06 and largest_gap < np.pi/3 and .4 < ratio < .9:
-            return ellipse, observed
+        inside = np.linalg.norm(_local_ellipse(_ellipse_points(ellipse), mouth), axis=1) < .97
+        if residual.mean() < .06 and largest_gap < np.pi/3 and .4 < ratio < .9 and inside.mean() > .95:
+            rim = _ellipse_points(ellipse, 180)
+            ix, iy = np.rint(rim).astype(int).T
+            valid = (ix >= 0) & (ix < strength.shape[1]) & (iy >= 0) & (iy < strength.shape[0])
+            support = np.zeros(180)
+            support[valid] = cv2.dilate(strength, None)[iy[valid], ix[valid]]
+            yy, xx = np.indices(strength.shape)
+            interior = np.linalg.norm(_local_ellipse(np.column_stack((xx.ravel(), yy.ravel())), mouth), axis=1).reshape(strength.shape) < .90
+            common_scale = max(1., float(np.percentile(strength[interior], 90)))
+            quality = float(np.minimum(support/common_scale, 1).mean() - residual.mean())
+            return ellipse, observed, quality
     except (ValueError, np.linalg.LinAlgError):
         pass
     return None
@@ -394,13 +440,30 @@ def _select_drum_pose(poses, observation, K):
         evidence.update(selection_method="coincident_solutions", selection_reliability="high")
         return 0, evidence
 
-    evidence["inner_search_used"] = True
-    inner = _inner_rim(mouth, observation["strength"])
-    if inner is not None:
-        ellipse, points = inner
-        evidence.update(bottom_ellipse=ellipse, bottom_points=points)
+    evidence.update(inner_search_used=True, inner_search_centers=[])
+    trials = []
+    for pose in poses:
+        direction = _pose_direction(pose, K)
+        length = np.linalg.norm(direction)
+        if length < 1e-9:
+            continue
+        unit = direction/length
+        radius = 1/np.linalg.norm(unit @ _rotation(mouth[2]) / (np.array(mouth[1])/2))
+        seed = np.array(mouth[0]) + unit*radius/3
+        evidence["inner_search_centers"].append(seed)
+        inner = _inner_rim(mouth, observation["strength"], seed)
+        if inner is None:
+            continue
+        ellipse, points, quality = inner
         selected = choose(np.array(ellipse[0])-mouth[0], "observed_inner_rim")
         if selected is not None:
+            trials.append((quality, selected, {**evidence, "bottom_ellipse": ellipse,
+                                               "bottom_points": points}))
+    if trials:
+        trials.sort(key=lambda trial: trial[0], reverse=True)
+        quality, selected, evidence = trials[0]
+        # Two seeds may find the same rim. Conflicting, near-equal fits stay uncertain.
+        if len(trials) == 1 or trials[1][1] == selected or quality-trials[1][0] > .05:
             return selected, evidence
     # Automatic, explicitly low-confidence choice if image evidence is insufficient.
     selected = int(np.argmax([p["normal_into_drum"][2] for p in poses]))
@@ -471,6 +534,8 @@ def get_drum_position(image, bbox, *, camera=None, diameter_m=None,
                   center_method="selected_circle_pose")
     if "wall_points" in evidence:
         result["wall_points_px"] = (evidence["wall_points"]*step+offset).tolist()
+    if "inner_search_centers" in evidence:
+        result["inner_search_centers_px"] = (np.array(evidence["inner_search_centers"]).reshape(-1, 2)*step+offset).tolist()
     if "bottom_ellipse" in evidence:
         inner = original(evidence["bottom_ellipse"])
         result.update(inner_ellipse=inner, bottom_ellipse_center_px=inner[0],
