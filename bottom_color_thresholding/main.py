@@ -1,4 +1,4 @@
-"""Press Run; choose ball/drum using testing.object in config.yaml."""
+"""Press Run; choose ball/drum/flare/gate using testing.object in config.yaml."""
 
 from testing import main as run_test
 

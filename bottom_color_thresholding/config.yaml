@@ -21,6 +21,8 @@ objects:
     diameter_m: 0.60
     diameter_assumed: true
   flare:
+    color: auto  # Or explicit red/yellow/blue/orange; automatic color selects nominal diameter.
+    diameter_assumed: true
     colored_height_m: 0.80
     colored_diameter_m: 0.016
     orange_height_m: 1.50
@@ -28,6 +30,10 @@ objects:
   gate:
     width_m: 1.50
     height_m: 1.50
+    dimensions_assumed: true
+    kind: main  # qualification: set height_m to the corresponding gate height.
+    post_diameter_m: null  # Not specified by the rulebook. Measure before using a single post.
+    max_reprojection_error_px: 3.0
 
 ball_detection:
   min_area: 20
@@ -45,7 +51,9 @@ drum_detection:
   min_edge_support: 0.60
 
 testing:
-  object: drum
+  object: gate  # ball / drum / flare / gate
   image: null
   mask: null  # Optional binary silhouette PNG, same size as image; skips color thresholds.
   bbox: null
+  gate_corners_px: null  # Four corresponding corners: TL, TR, BR, BL; original-image pixels.
+  pick_gate_corners: false  # When true, click these four corners after selecting the ROI.
