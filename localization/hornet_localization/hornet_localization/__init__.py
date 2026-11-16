@@ -1,0 +1,1 @@
+"""Hornet XII localization package."""
