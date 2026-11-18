@@ -1,0 +1,58 @@
+cmake_minimum_required(VERSION 3.8)
+project(optical_flow)
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc video videoio calib3d)
+
+add_executable(optical_flow_node src/optical_flow_node.cpp)
+add_executable(of_video_player src/of_video_player.cpp)
+foreach(node optical_flow_node of_video_player)
+  target_compile_features(${node} PUBLIC cxx_std_17)
+  target_include_directories(${node} PRIVATE include ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(${node} ${OpenCV_LIBS})
+  ament_target_dependencies(${node} rclcpp std_msgs sensor_msgs geometry_msgs nav_msgs ament_index_cpp)
+endforeach()
+
+install(TARGETS optical_flow_node of_video_player DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/view_video.py DESTINATION lib/${PROJECT_NAME})
+install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
+install(FILES straight_line.MOV DESTINATION share/${PROJECT_NAME}/videos)
+
+if(BUILD_TESTING)
+  enable_testing()
+  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  add_executable(test_metric_estimator test/test_metric_estimator.cpp)
+  target_compile_features(test_metric_estimator PRIVATE cxx_std_17)
+  target_include_directories(test_metric_estimator PRIVATE include ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(test_metric_estimator ${OpenCV_LIBS})
+  add_test(NAME metric_estimator COMMAND test_metric_estimator
+    ${CMAKE_CURRENT_SOURCE_DIR}/config/bottom_camera.yaml)
+  add_test(NAME odometry_contract COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/test_odometry_contract.py $<TARGET_FILE:optical_flow_node>)
+  set_tests_properties(odometry_contract PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+
+  add_executable(test_flow_tracker test/test_flow_tracker.cpp)
+  target_compile_features(test_flow_tracker PRIVATE cxx_std_17)
+  target_include_directories(test_flow_tracker PRIVATE include ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(test_flow_tracker ${OpenCV_LIBS})
+  add_test(NAME flow_tracker COMMAND test_flow_tracker ${CMAKE_CURRENT_SOURCE_DIR}/straight_line.MOV)
+
+  add_executable(test_image_message test/test_image_message.cpp)
+  target_compile_features(test_image_message PRIVATE cxx_std_17)
+  target_include_directories(test_image_message PRIVATE include ${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(test_image_message ${OpenCV_LIBS})
+  ament_target_dependencies(test_image_message sensor_msgs)
+  add_test(NAME image_message COMMAND test_image_message)
+endif()
+
+ament_package()

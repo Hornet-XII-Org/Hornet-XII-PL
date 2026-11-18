@@ -1,0 +1,33 @@
+optical_flow_node:
+  ros__parameters:
+    reference_frame: odom
+    child_frame: base_link
+    # Constant BODY ORIGIN height above a horizontal floor in reference +Z-up coordinates.
+    # User camera-to-floor assumption: fixed 1.0 m, uncertainty 0.1 m (1 sigma).
+    # The body value below assumes camera and body origins coincide FOR THIS TEST.
+    # Confirm camera_position_body_m before setting extrinsics_calibrated=1.
+    # For a level body: body_height = camera_height - camera_position_body_m[2].
+    body_height_m: 1.0
+    height_std_m: 0.1
+    min_dt_s: 0.005
+    max_dt_s: 0.2
+    orientation_max_gap_s: 0.1
+    orientation_wait_s: 0.15
+    # Opt-in video test only; normal operation requires measured orientation.
+    assume_fixed_orientation: false
+    fixed_orientation_std_rad: 0.017453292519943295  # assumed 1 degree, not measured
+    max_pending_images: 5
+    input_reliable: false  # false = ROS sensor-data QoS, as required by the camera interface
+    opencv_threads: 0
+    min_tracks: 12
+    min_inlier_ratio: 0.6
+    residual_threshold_m: 0.025
+    pixel_noise_px: 0.5
+    velocity_noise_mps: 0.02
+    focal_relative_std: 0.01
+    principal_point_std_px: 0.5
+    extrinsic_angle_std_rad: 0.01
+    lever_arm_std_m: 0.005
+    unobserved_variance: 1000000.0
+    max_speed_mps: 5.0
+    min_ray_cosine: 0.2
