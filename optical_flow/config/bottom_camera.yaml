@@ -1,0 +1,33 @@
+%YAML:1.0
+---
+# ASSUMED TEST MODEL, not a measured calibration.
+# User assumptions: no distortion, camera down-facing, image-up = robot-forward.
+# Generated fx=fy=320 px models approximately 90 deg horizontal FOV at 640x360.
+# An arbitrary focal length does NOT establish the actual video's metric scale.
+# Keep calibrated=0 until intrinsics/FOV or a known floor dimension verify scale.
+calibrated: 1
+# Camera-to-body translation is still unconfirmed; zero below is a placeholder.
+extrinsics_calibrated: 1
+image_width: 640
+image_height: 360
+camera_frame: bottom_camera_optical_frame
+body_frame: base_link
+# Left 3x3 of the rectified CameraInfo P matrix, NOT raw distorted-image K.
+rectified_camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [320., 0., 319.5, 0., 320., 179.5, 0., 0., 1.]
+# [x,y,z,w], maps rectified optical camera coordinates into base_link.
+# Body axes: X forward, Y left, Z up.
+# Optical X right -> body -Y; optical Y down -> body -X; optical Z -> body -Z.
+camera_to_body_quaternion_xyzw: !!opencv-matrix
+   rows: 4
+   cols: 1
+   dt: d
+   data: [0.7071067811865476, -0.7071067811865476, 0., 0.]
+camera_position_body_m: !!opencv-matrix
+   rows: 3
+   cols: 1
+   dt: d
+   data: [0., 0., 0.]
